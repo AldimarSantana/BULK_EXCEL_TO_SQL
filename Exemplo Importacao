@@ -1,0 +1,43 @@
+
+
+echo "# BULK_EXCEL_TO_SQL" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git remote add origin https://github.com/AldimarSantana/BULK_EXCEL_TO_SQL.git
+git push -u origin master
+
+            DataBase db = new DataBase();
+            db.ConectaDB();
+
+            string aspas = "\"";
+            string arquivo = "C:\\Aldimar\\Base.xlsx";
+           
+            OleDbConnection Cn = new OleDbConnection("Provider = Microsoft.ACE.OLEDB.12.0; Data Source = " + arquivo + ";" + "Extended Properties = " + aspas + "Excel 12.0; HDR = YES" + aspas);
+            Cn.Open();
+
+            object[] Restricoes = { null, null, null, "TABLE" };
+            DataTable DTSchema = Cn.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, Restricoes);
+
+            if (DTSchema.Rows.Count > 0)
+            {
+                string Sheet = DTSchema.Rows[0]["TABLE_NAME"].ToString();
+                OleDbCommand Comando = new OleDbCommand("SELECT * FROM [" + Sheet + "]", Cn);
+                DataTable Dados = new DataTable();
+                OleDbDataAdapter DA = new OleDbDataAdapter(Comando);
+                DA.Fill(Dados);
+
+                using (SqlBulkCopy bulkCopy = new SqlBulkCopy(db.Cnx))
+                {
+                    bulkCopy.ColumnMappings.Add(Dados.Columns[0].ToString(), "Nome");
+                    bulkCopy.ColumnMappings.Add(Dados.Columns[1].ToString(), "Sobrenome");
+                    bulkCopy.ColumnMappings.Add(Dados.Columns[2].ToString(), "Idade");
+                    bulkCopy.ColumnMappings.Add(Dados.Columns[3].ToString(), "Ativo");
+
+                    bulkCopy.DestinationTableName = "Tb_Pessoas5";
+                    bulkCopy.WriteToServer(Dados);
+
+                    Cn.Close();
+                    db.Cnx.Close();
+                }
+            }
